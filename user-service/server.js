@@ -1,0 +1,79 @@
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+// Hapus import 'mysql2/promise' dari sini, pindahkan ke Service Layer
+
+const app = express();
+
+// ================= MIDDLEWARE =================
+app.use(cors());
+app.use(express.json());
+app.use(express.static(__dirname)); // Untuk melayani user.html
+
+// ================= KONFIG & INIT DATABASE =================
+// Catatan: Pindahkan semua logic DB (dbConfig, pool, initDb) ke file terpisah
+// yang dapat diekspor, misalnya 'services/db.js' atau 'services/userService.js'.
+// Untuk sementara, biarkan di sini agar server dapat menyala.
+const mysql = require('mysql2/promise');
+const PORT = process.env.PORT || 4000;
+
+const dbConfig = {
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD, 
+    database: process.env.DB_NAME,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+};
+
+let pool;
+
+async function initDb() {
+    try {
+        pool = mysql.createPool(dbConfig);
+
+        const createTableSQL = `
+          CREATE TABLE IF NOT EXISTS users (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) NOT NULL UNIQUE,
+            role VARCHAR(50) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        `;
+        await pool.query(createTableSQL);
+        console.log('✅ Connected to MySQL & users table ready');
+    } catch (err) {
+        console.error('❌ Error initializing DB:', err);
+        process.exit(1);
+    }
+}
+// export pool agar bisa digunakan di userService.js
+module.exports.pool = pool; 
+
+
+// ================= ROUTES (PERBAIKAN UTAMA) =================
+// 1. Import router dari userRoutes.js
+const userRoutes = require('./routes/userRoutes');
+
+// 2. Gunakan router sebagai middleware di path /users
+app.use('/users', userRoutes);
+
+// 3. Tambahkan rute default untuk interface (user.html)
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'user.html'));
+});
+
+
+// Hapus semua rute app.get('/users'), app.get('/users/:id'), dan app.post('/users')
+// dari server.js. Logic tersebut HARUS ada di userController.js.
+
+
+// ================= START SERVER =================
+initDb().then(() => {
+    app.listen(PORT, () => {
+        console.log(`🚀 User Service running on http://localhost:${PORT}`);
+    });
+});
