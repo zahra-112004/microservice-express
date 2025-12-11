@@ -6,15 +6,12 @@ const path = require('path');
 
 const app = express();
 
-// ================= MIDDLEWARE =================
+
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname)); // Untuk melayani user.html
+app.use(express.static(__dirname)); 
 
-// ================= KONFIG & INIT DATABASE =================
-// Catatan: Pindahkan semua logic DB (dbConfig, pool, initDb) ke file terpisah
-// yang dapat diekspor, misalnya 'services/db.js' atau 'services/userService.js'.
-// Untuk sementara, biarkan di sini agar server dapat menyala.
+
 const mysql = require('mysql2/promise');
 const PORT = process.env.PORT || 4000;
 
@@ -50,11 +47,8 @@ async function initDb() {
         process.exit(1);
     }
 }
-// export pool agar bisa digunakan di userService.js
 module.exports.pool = pool; 
 
-
-// ================= ROUTES (PERBAIKAN UTAMA) =================
 // 1. Import router dari userRoutes.js
 const userRoutes = require('./routes/userRoutes');
 
@@ -67,11 +61,9 @@ app.get('/', (req, res) => {
 });
 
 
-// Hapus semua rute app.get('/users'), app.get('/users/:id'), dan app.post('/users')
-// dari server.js. Logic tersebut HARUS ada di userController.js.
 
 
-// ================= START SERVER =================
+//  START SERVER 
 initDb().then(() => {
     app.listen(PORT, () => {
         console.log(`🚀 User Service running on http://localhost:${PORT}`);
